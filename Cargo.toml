@@ -1,0 +1,11 @@
+[package]
+name = "wavtojson"
+version = "0.1.0"
+authors = ["Jonathan King <jonathan.j.king@gmail.com>"]
+
+[dependencies]
+clap = "2.30.0"
+hound = "3.3.0"
+serde = "1"
+serde_json = "1.0.9"
+serde_derive = "1"
