@@ -49,45 +49,45 @@ fn main() {
 	// Initialise a vector to the right width. One element for each pixel.
 	let sections = vec![0; width];
 
-	let mut reader = hound::WavReader::open(filename).unwrap();
-	// Samples-per-pixel taking into account channels
+	// Cheat and use a library to parse the waveform. 
+	let mut reader = hound::WavReader::open(filename).expect("invalid wavfile path");
+
+	// Total amples from reader.len() take into account channels
 	let samples_per_pixel = reader.len() / width as u32;
 
 	reader.seek(0).unwrap();
 	let mut samples = reader.samples();
-	{
-		let mut data: Vec<u32> = vec![];
-		for _ in sections.iter() {
-			let mut prev = 0;
-			let mut sum: u32 = 0;
-			for _ in 0..samples_per_pixel {
-				let mut next_sample = samples.next();
-				match next_sample {
-					Some(Ok(sample)) => {
-						let diff: i32 = sample - prev;
-						sum += diff.abs() as u32;
-						prev = sample;
-					},
-					_ => () // Skip if null
-				}
+	let mut data: Vec<u32> = vec![];
+	for _ in sections.iter() {
+		let mut prev = 0;
+		let mut sum: u32 = 0;
+		for _ in 0..samples_per_pixel {
+			match samples.next() {
+				Some(Ok(sample)) => {
+					let diff: i32 = sample - prev;
+					sum += diff.abs() as u32;
+					prev = sample;
+				},
+				_ => () // Skip if null
 			}
-			data.push(sum);
 		}
-		// Scale it down
-		let max_value = data.iter()
-			.fold(0, |i, sum| max(i, *sum));
-
-		// TODO: Tidy up type casting
-		let scaled_data = data.iter()
-			.map(|i| ((*i as f32 / max_value as f32).powf(0.3) * height as f32) as u64)
-			.collect::<Vec<u64>>();
-
-		let output = OutputData {
-			width: width,
-			height: height,
-			resolution: resolution,
-			data: scaled_data
-		};
-		print!("{}", serde_json::to_string(&output).unwrap());
+		data.push(sum);
 	}
+
+	// Scale it down by the maximum
+	let max_value = data.iter()
+		.fold(0, |i, sum| max(i, *sum));
+
+	// TODO: Tidy up type casting hell
+	let scaled_data = data.iter()
+		.map(|i| ((*i as f32 / max_value as f32).powf(0.3) * height as f32) as u64)
+		.collect::<Vec<u64>>();
+
+	let output = OutputData {
+		width: width,
+		height: height,
+		resolution: resolution,
+		data: scaled_data
+	};
+	print!("{}", serde_json::to_string(&output).unwrap());
 }
